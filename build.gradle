@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'io.freefair.lombok' version '5.1.1'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+def junit = '5.9.2'
+def log4j = '2.18.0'
+def assertj = '3.23.1'
+def restAssured = '5.3.0'
+sourceCompatibility = '17'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+    testCompileOnly 'org.projectlombok:lombok:1.18.26'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+    implementation "io.rest-assured:rest-assured:${restAssured}"
+    implementation "io.rest-assured:json-path:${restAssured}"
+    implementation "io.rest-assured:json-schema-validator:${restAssured}"
+
+    //JUnit
+    implementation "org.junit.jupiter:junit-jupiter:${junit}"
+
+}
+
+test {
+    useJUnitPlatform()
+    systemProperties(System.getProperties())
+}
