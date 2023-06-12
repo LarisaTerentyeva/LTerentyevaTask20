@@ -3,8 +3,6 @@ import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.example.dto.PassengerRequest;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
@@ -17,9 +15,8 @@ public class PassengerTask20 {
 
     public static String passengerId;
 
-    @BeforeEach
-    void createPassenger() {
-        PassengerRequest newPassengerRequest = PassengerRequest.builder().name("Steven Thorley the Third").trips(6).airline(3).build();
+    void createPassenger(String passengerName) {
+        PassengerRequest newPassengerRequest = PassengerRequest.builder().name(passengerName).trips(6).airline(3).build();
 
         given().log().all().
                 contentType(ContentType.JSON).
@@ -30,11 +27,10 @@ public class PassengerTask20 {
                 statusCode(HttpStatus.SC_OK);
     }
 
-    @BeforeEach
-    void getPassengerId() {
+    void getPassengerId(String passengerName) {
         Response response = given().contentType(ContentType.JSON).
                 when().
-                get("https://api.instantwebtools.net/v1/passenger?page=21&size=1000").
+                get("https://api.instantwebtools.net/v1/passenger?page=345&size=100").
                 then().extract().response();
 
         JsonPath j = new JsonPath(response.asString());
@@ -42,55 +38,28 @@ public class PassengerTask20 {
         int s = j.getInt("data.size()");
         for (int i = 0; i < s; i++) {
             String name = j.getString("data[" + i + "].name");
-            if (name.equals("Steven Thorley the Third"))
+            if (name.equals(passengerName))
                 {passengerId = j.getString("data[" + i + "]._id");
-                break;}
-            else if ((name.equals("Greg the garlic Farmer")))
-                { passengerId = j.getString("data[" + i + "]._id");
                 break;}
         }
         System.out.println(passengerId);
     }
 
-    @AfterEach
-    void deleteCreatedPassengers() {
-        Response response = given().contentType(ContentType.JSON).
+    void deleteCreatedPassenger(String passengerId) {
+        given().log().all().
+                contentType(ContentType.JSON).
                 when().
-                get("https://api.instantwebtools.net/v1/passenger?page=21&size=1000").
-                then().extract().response();
-
-        JsonPath j = new JsonPath(response.asString());
-
-        int s = j.getInt("data.size()");
-        for (int i = 0; i < s; i++) {
-            String name = j.getString("data[" + i + "].name");
-            if (name.equals("Bodger Blodger")) { passengerId = j.getString("data[" + i + "]._id");
-            given().log().all().
-                    contentType(ContentType.JSON).
-                    when().
-                    delete("https://api.instantwebtools.net/v1/passenger/" + passengerId).
-                    then().log().all().
-                    statusCode(HttpStatus.SC_OK);}
-            else if ((name.equals("Greg the garlic Farmer"))) { passengerId = j.getString("data[" + i + "]._id");
-            given().log().all().
-                    contentType(ContentType.JSON).
-                    when().
-                    delete("https://api.instantwebtools.net/v1/passenger/" + passengerId).
-                    then().log().all().
-                    statusCode(HttpStatus.SC_OK);}
-            else if ((name.equals("Steven Thorley the Third"))) { passengerId = j.getString("data[" + i + "]._id");
-                given().log().all().
-                        contentType(ContentType.JSON).
-                        when().
-                        delete("https://api.instantwebtools.net/v1/passenger/" + passengerId).
-                        then().log().all().
-                        statusCode(HttpStatus.SC_OK);}
-        }
+                delete("https://api.instantwebtools.net/v1/passenger/" + passengerId).
+                then().log().all().
+                statusCode(HttpStatus.SC_OK);
     }
 
     @Test
     void passengerPostTest() {
-        PassengerRequest newPassengerRequest = PassengerRequest.builder().name("Bodger Blodger").trips(3).airline(2).build();
+        String passengerName;
+        passengerName = "Bodger Blodger";
+
+        PassengerRequest newPassengerRequest = PassengerRequest.builder().name(passengerName).trips(3).airline(2).build();
 
         given().log().all().
                 contentType(ContentType.JSON).
@@ -98,12 +67,19 @@ public class PassengerTask20 {
                 when().
                 post("https://api.instantwebtools.net/v1/passenger").
                 then().log().ifValidationFails().
-                statusCode(HttpStatus.SC_OK);
+                statusCode(HttpStatus.SC_OK).
+                extract().response();
+
+        getPassengerId(passengerName);
+        deleteCreatedPassenger(passengerId);
+
     }
 
     @Test
     void passengerNegativePostTestAirlineData() {
-        PassengerRequest newPassengerRequest = PassengerRequest.builder().name("Bodger Blodger").trips(3).airline(555555555).build();
+        String passengerName;
+        passengerName = "Bodger Blodger";
+        PassengerRequest newPassengerRequest = PassengerRequest.builder().name(passengerName).trips(3).airline(555555555).build();
 
         given().log().all().
                 contentType(ContentType.JSON).
@@ -113,6 +89,9 @@ public class PassengerTask20 {
                 then().log().ifValidationFails().
                 statusCode(HttpStatus.SC_BAD_REQUEST).
                 body("message", is("valid airline data must submit."));
+
+        getPassengerId(passengerName);
+        deleteCreatedPassenger(passengerId);
     }
 
     @Test
@@ -128,6 +107,10 @@ public class PassengerTask20 {
 
     @Test
     void passengerGetTest() {
+        String passengerName;
+        passengerName = "Steven Thorley the Third";
+        createPassenger(passengerName);
+        getPassengerId(passengerName);
         given().
                 when().
                 get("https://api.instantwebtools.net/v1/passenger/" + passengerId).
@@ -136,12 +119,17 @@ public class PassengerTask20 {
                 body("name", is("Steven Thorley the Third")).
                 body("trips", is(6)).
                 body("airline[0].id", is(3));
+        deleteCreatedPassenger(passengerId);
     }
 
     @Test
     void passengerPutTest() {
-        PassengerRequest updatedPassengerRequest = PassengerRequest.builder().name("Greg the garlic Farmer").trips(33).airline(1).build();
+        String originalPassengerName = "Greg the garlic Farmer";
+        createPassenger(originalPassengerName);
+        String updatedPassengerName = "Baradun the High Sorcerer";
+        getPassengerId(originalPassengerName);
 
+        PassengerRequest updatedPassengerRequest = PassengerRequest.builder().name(updatedPassengerName).trips(33).airline(1).build();
         given().log().all().
                 contentType(ContentType.JSON).
                 body(updatedPassengerRequest).
@@ -156,23 +144,34 @@ public class PassengerTask20 {
                 get("https://api.instantwebtools.net/v1/passenger/" + passengerId).
                 then().log().all().
                 statusCode(HttpStatus.SC_OK).
-                body("name", is("Greg the garlic Farmer")).
+                body("name", is("Baradun the High Sorcerer")).
                 body("trips", is(33)).
                 body("airline[0].id", is(1));
+        deleteCreatedPassenger(passengerId);
     }
 
     @Test
     void passengerNegativePutTestNoData() {
+        String passengerName;
+        passengerName = "Bodger Blodger";
+        createPassenger(passengerName);
+        getPassengerId(passengerName);
         given().
                 when().
                 put("https://api.instantwebtools.net/v1/passenger/" + passengerId).
                 then().log().all().
                 statusCode(HttpStatus.SC_BAD_REQUEST).
                 body("message", is("valid passenger data must submit."));
+        deleteCreatedPassenger(passengerId);
     }
 
     @Test
     void passengerDeleteTest() {
+        String passengerName;
+        passengerName = "Steven Thorley the Third";
+        createPassenger(passengerName);
+        getPassengerId(passengerName);
+
         given().log().all().
                 contentType(ContentType.JSON).
                 when().
